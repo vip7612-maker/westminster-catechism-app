@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a2332" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="description" content="웨스트민스터 소요리문답 1~107문 암송 도우미 — 제곡교회" />
+  <meta property="og:title" content="소요리문답 암송 · 제곡교회" />
+  <meta property="og:description" content="웨스트민스터 소요리문답 107문 플래시카드 암송앱" />
+  <meta property="og:type" content="website" />
+  <title>소요리문답 암송 · 제곡교회</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-title">소요리문답 암송</div>
+          <div class="brand-sub">제곡교회 · 합동측</div>
+        </div>
+        <div class="counter">
+          <span id="currentNo">1</span>
+          <span class="counter-sep">/</span>
+          <span>107</span>
+        </div>
+      </div>
+      <div class="speed-bar" role="group" aria-label="음성 속도 조절">
+        <button class="speed-btn" data-speed="slow"  aria-label="느리게 재생">느림</button>
+        <button class="speed-btn is-active" data-speed="normal" aria-label="보통 속도 재생">보통</button>
+        <button class="speed-btn" data-speed="fast"  aria-label="빠르게 재생">빠름</button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <div class="card-wrap">
+        <div class="card" id="card" role="button" tabindex="0" aria-label="카드를 탭하여 답변 보기">
+          <!-- Question side -->
+          <div class="face face-q">
+            <div class="face-tag">제 <span id="qNo">1</span> 문</div>
+            <div class="face-body" id="qBody">질문 로딩 중…</div>
+            <div class="face-footer">
+              <button class="icon-btn voice-btn" id="qVoiceBtn" aria-label="질문 음성 듣기" type="button">
+                <svg viewBox="0 0 24 24" class="i-speaker" aria-hidden="true">
+                  <path d="M3 10v4a1 1 0 0 0 1 1h3l4 4V5L7 9H4a1 1 0 0 0-1 1z"/>
+                  <path d="M16.5 12a4.5 4.5 0 0 0-2.5-4.03v8.06A4.5 4.5 0 0 0 16.5 12z"/>
+                  <path d="M14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54z"/>
+                </svg>
+                <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true">
+                  <rect x="6" y="6" width="12" height="12" rx="1.5"/>
+                </svg>
+                <span class="btn-label">듣기</span>
+              </button>
+              <button class="icon-btn explain-btn" id="explainBtn" aria-label="해설 보기" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 2a7 7 0 0 0-4 12.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26A7 7 0 0 0 12 2z"/>
+                  <path d="M9 21h6"/>
+                </svg>
+                <span class="btn-label">해설</span>
+              </button>
+            </div>
+            <div class="face-hint">화면을 탭하면 답이 나옵니다</div>
+          </div>
+
+          <!-- Answer side -->
+          <div class="face face-a">
+            <div class="face-tag">답</div>
+            <div class="face-body" id="aBody">답변 로딩 중…</div>
+            <div class="face-footer">
+              <button class="icon-btn voice-btn" id="aVoiceBtn" aria-label="답변 음성 듣기" type="button">
+                <svg viewBox="0 0 24 24" class="i-speaker" aria-hidden="true">
+                  <path d="M3 10v4a1 1 0 0 0 1 1h3l4 4V5L7 9H4a1 1 0 0 0-1 1z"/>
+                  <path d="M16.5 12a4.5 4.5 0 0 0-2.5-4.03v8.06A4.5 4.5 0 0 0 16.5 12z"/>
+                  <path d="M14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54z"/>
+                </svg>
+                <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true">
+                  <rect x="6" y="6" width="12" height="12" rx="1.5"/>
+                </svg>
+                <span class="btn-label">듣기</span>
+              </button>
+              <div class="face-side-spacer"></div>
+            </div>
+            <div class="face-hint">탭하면 질문으로 돌아갑니다</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <nav class="navbar">
+      <button class="nav-btn" id="prevBtn" type="button" aria-label="이전 문답">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>이전</span>
+      </button>
+      <button class="nav-btn nav-jump" id="jumpBtn" type="button" aria-label="문 번호로 이동">
+        <span id="jumpLabel">1 문</span>
+      </button>
+      <button class="nav-btn" id="nextBtn" type="button" aria-label="다음 문답">
+        <span>다음</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Explanation modal -->
+  <div class="modal" id="explainModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-panel" role="dialog" aria-labelledby="explainTitle" aria-modal="true">
+      <div class="modal-head">
+        <div class="modal-title" id="explainTitle">제 <span id="exNo">1</span> 문 · 해설</div>
+        <button class="modal-close" id="explainClose" aria-label="해설 닫기" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="ex-section">
+          <div class="ex-label">문</div>
+          <div class="ex-text" id="exQ"></div>
+        </div>
+        <div class="ex-section">
+          <div class="ex-label">답</div>
+          <div class="ex-text" id="exA"></div>
+        </div>
+        <div class="ex-section">
+          <div class="ex-label">해설</div>
+          <div class="ex-text" id="exExplain"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Jump-to-number modal -->
+  <div class="modal" id="jumpModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-panel jump-panel" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div class="modal-title">이동할 문 번호</div>
+        <button class="modal-close" id="jumpClose" aria-label="닫기" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="jump-grid" id="jumpGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="data.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
