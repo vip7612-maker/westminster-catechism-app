@@ -249,9 +249,12 @@ function stopAllVoice() {
   setVoiceBtnState("a", false);
 }
 
+// TTS용 텍스트 — 데이터의 \n 줄바꿈은 공백으로 (낭독 시 어색한 끊김 방지)
+function ttsText(s) { return (s || "").replace(/\n/g, " ").replace(/\s+/g, " ").trim(); }
+
 function toggleVoice(which) {
   const item = getCurrent();
-  const text = which === "q" ? item.question : item.answer;
+  const text = ttsText(which === "q" ? item.question : item.answer);
   const gender = genderForId(item.id);
 
   if (STATE.playing === which) {
@@ -379,7 +382,7 @@ document.querySelectorAll(".speed-btn").forEach((b) => {
       STATE.playing = which;
       setVoiceBtnState(which, true);
       const item = getCurrent();
-      const text = which === "q" ? item.question : item.answer;
+      const text = ttsText(which === "q" ? item.question : item.answer);
       TTS.speakLoop(text, genderForId(item.id));
     }
   });

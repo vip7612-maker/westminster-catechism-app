@@ -196,6 +196,14 @@ body {
   transform: rotateY(180deg);
 }
 
+/* backface-visibility 안전망 — 일부 인앱 브라우저(카카오톡 등)에서
+   자식 z-index/transform 때문에 backface가 비치는 문제를 차단한다.
+   카드 뒤집기 transition(0.62s)의 중간 지점(0.31s)에서 visibility를 전환. */
+.face-q { visibility: visible; transition: visibility 0s linear 0s; }
+.face-a { visibility: hidden;  transition: visibility 0s linear 0.31s; }
+.card.is-flipped .face-q { visibility: hidden;  transition: visibility 0s linear 0.31s; }
+.card.is-flipped .face-a { visibility: visible; transition: visibility 0s linear 0s; }
+
 .face-tag {
   font-size: 13px;
   font-weight: 700;
@@ -219,21 +227,22 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 19px;
-  line-height: 1.7;
+  font-size: 21px;
+  line-height: 1.75;
   color: var(--ink-1);
   letter-spacing: -0.2px;
   font-weight: 500;
   word-break: keep-all;
+  white-space: pre-line;     /* 데이터의 \n 줄바꿈을 살림 */
   overflow-y: auto;
   padding: 8px 4px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
 .face-a .face-body {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 400;
-  line-height: 1.75;
+  line-height: 1.85;
 }
 .face-body::-webkit-scrollbar { width: 3px; }
 .face-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
@@ -511,23 +520,23 @@ body {
 @media (max-height: 700px) {
   .face { padding: 22px 18px 18px; }
   .face-tag { margin-bottom: 12px; padding-bottom: 10px; font-size: 12px; }
-  .face-body { font-size: 17px; line-height: 1.6; }
-  .face-a .face-body { font-size: 15.5px; line-height: 1.65; }
+  .face-body { font-size: 19px; line-height: 1.7; }
+  .face-a .face-body { font-size: 17.5px; line-height: 1.75; }
   .icon-btn { min-height: 40px; padding: 0 12px; }
   .nav-btn { min-height: 46px; }
   .brand-title { font-size: 16px; }
 }
 @media (max-height: 600px) {
-  .face-body { font-size: 16px; }
-  .face-a .face-body { font-size: 14.5px; }
+  .face-body { font-size: 18px; }
+  .face-a .face-body { font-size: 16.5px; }
   .speed-bar { margin-top: 6px; }
   .speed-btn { padding: 6px 0; font-size: 12px; }
 }
 
 /* Very small width (< 340px) */
 @media (max-width: 340px) {
-  .face-body { font-size: 16px; }
-  .face-a .face-body { font-size: 15px; }
+  .face-body { font-size: 18px; }
+  .face-a .face-body { font-size: 17px; }
   .icon-btn { padding: 0 10px; }
   .icon-btn .btn-label { display: none; }
 }
