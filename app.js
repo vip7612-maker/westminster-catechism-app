@@ -433,6 +433,20 @@ buildJumpGrid();
 applySpeedUI();
 render();
 
+// 데이터 로딩 실패 감지 — 3초 후에도 "로딩 중" 텍스트면 새로고침 안내
+setTimeout(() => {
+  const qb = document.getElementById("qBody");
+  if (qb && qb.textContent.trim() === "질문 로딩 중…") {
+    qb.innerHTML = `데이터를 불러오지 못했습니다.<br>
+      <button onclick="location.reload(true)"
+        style="margin-top:12px;padding:8px 20px;border-radius:8px;
+               background:#c9a84c;color:#0e1c2e;border:none;
+               font-size:15px;cursor:pointer;font-weight:600;">
+        새로고침
+      </button>`;
+  }
+}, 3000);
+
 // iOS AudioContext/Speech 권한 워밍업 — 첫 사용자 인터랙션에서 활성화
 const warmup = () => {
   // Web Speech API 워밍업 (폴백 대비)
