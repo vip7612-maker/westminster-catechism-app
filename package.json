@@ -1,0 +1,10 @@
+{
+  "name": "catechism-app",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "gen-audio": "node scripts/generate-audio.js",
+    "gen-audio:force": "node scripts/generate-audio.js --force"
+  }
+}

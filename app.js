@@ -13,8 +13,8 @@ const STATE = {
   playing: null,    // 'q' | 'a' | null
 };
 
-// 속도(rate) — 묵직한 낭독 톤이지만 느려서 답답하지 않도록
-const RATE = { slow: 0.85, normal: 1.0, fast: 1.2 };
+// 속도(rate) — 자연스러운 팟캐스트 페이스
+const RATE = { slow: 0.82, normal: 0.95, fast: 1.15 };
 
 // ============================================================
 // DOM
@@ -67,9 +67,14 @@ const LS = {
 };
 
 // ============================================================
-// 음성(TTS) 매니저 — 묵직한 낭독 톤, 무한반복, 남여 교차
+// 음성(TTS) 매니저 — 사전 생성 MP3 우선, Web Speech API 폴백
 // ============================================================
 const TTS = (() => {
+  // ── HTML5 Audio (사전 생성 파일) ─────────────────────────────
+  let currentAudio = null;
+  let audioToken   = 0;
+
+  // ── Web Speech API (폴백) ─────────────────────────────────────
   const synth = window.speechSynthesis;
   let voicesCache = [];
   let voicesReadyResolve;
@@ -77,31 +82,32 @@ const TTS = (() => {
 
   function loadVoices() {
     const v = synth.getVoices() || [];
-    if (v.length > 0) {
-      voicesCache = v;
-      voicesReadyResolve?.(v);
-    }
+    if (v.length > 0) { voicesCache = v; voicesReadyResolve?.(v); }
   }
   loadVoices();
   if (typeof synth.onvoiceschanged !== "undefined") {
     synth.addEventListener("voiceschanged", loadVoices);
   }
 
-  // 한국어 음성 중 남/여 후보를 골라낸다.
-  // iOS/macOS: Yuna(여), Heami(여) 등 — 남성 한국어가 거의 없음 → fallback은 pitch로 구분
-  // Android: ko-KR-male/female 또는 Google 한국어
-  // 카카오톡 인앱 브라우저: iOS WebView를 사용하므로 iOS와 동일
+  function voiceQualityTier(v) {
+    const n = v.name.toLowerCase();
+    if (/premium|enhanced/i.test(n)) return 0;
+    if (/neural|wavenet/i.test(n)) return 1;
+    if (/google/i.test(n)) return 2;
+    return 3;
+  }
+
   function pickKoreanVoices() {
     const all = voicesCache.length ? voicesCache : (synth.getVoices() || []);
-    const ko = all.filter(v => /ko[-_]?KR|Korean|한국어/i.test(v.lang + " " + v.name));
+    const ko  = all.filter(v => /ko[-_]?KR|Korean|한국어/i.test(v.lang + " " + v.name));
     if (ko.length === 0) return { male: null, female: null };
-
-    // 이름으로 성별 식별 (휴리스틱)
-    const isFemaleName = (n) => /female|woman|yuna|heami|sora|ko-KR-Standard-A|ko-KR-Standard-B|ko-KR-Wavenet-A|ko-KR-Wavenet-B/i.test(n);
-    const isMaleName   = (n) => /male|man|jinho|ko-KR-Standard-C|ko-KR-Standard-D|ko-KR-Wavenet-C|ko-KR-Wavenet-D/i.test(n);
-
-    const female = ko.find(v => isFemaleName(v.name)) || ko[0];
-    const male   = ko.find(v => isMaleName(v.name) && v.name !== female.name) || ko[1] || ko[0];
+    const sorted = [...ko].sort((a, b) => voiceQualityTier(a) - voiceQualityTier(b));
+    const isF = (n) => /female|woman|yuna|heami|sora|Standard-A|Standard-B|Wavenet-A|Wavenet-B/i.test(n);
+    const isM = (n) => /male|man|jinho|Standard-C|Standard-D|Wavenet-C|Wavenet-D/i.test(n);
+    const female = sorted.find(v => isF(v.name)) || sorted[0];
+    const male   = sorted.find(v => isM(v.name) && v.name !== female.name)
+                || sorted.find(v => v.name !== female.name)
+                || sorted[0];
     return { male, female };
   }
 
@@ -109,72 +115,85 @@ const TTS = (() => {
     const u = new SpeechSynthesisUtterance(text);
     const { male, female } = pickKoreanVoices();
     const v = (gender === "male" ? male : female) || male || female;
-    if (v) {
-      u.voice = v;
-      u.lang = v.lang;
-    } else {
-      u.lang = "ko-KR";
-    }
-    // 묵직한 낭독 톤 — 남성: pitch 낮게, 여성: pitch 약간 낮춰 진중하게
-    u.pitch = (gender === "male") ? 0.7 : 0.95;
-    // 동일 음성을 남/여로 fallback할 때 구분하기 위해 pitch 차이를 둠
+    if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "ko-KR"; }
+    u.pitch  = 1.0;
     if (male && female && male.name === female.name) {
-      u.pitch = (gender === "male") ? 0.55 : 1.1;
+      u.pitch = (gender === "male") ? 0.85 : 1.1;
     }
-    u.rate = RATE[STATE.speed] || 1.0;
+    u.rate   = RATE[STATE.speed] || 1.0;
     u.volume = 1.0;
     return u;
   }
 
-  let currentToken = 0; // 재생 세션 토큰 — 변경되면 onend 무한루프 중단
-  let currentUtter = null;
+  let synthToken = 0;
 
-  function stop() {
-    currentToken++;
-    currentUtter = null;
+  function stopSynth() {
+    synthToken++;
     try { synth.cancel(); } catch (e) { /* noop */ }
   }
 
-  /**
-   * @param {string} text 낭독할 텍스트
-   * @param {'male'|'female'} gender
-   * @param {() => void} onEndOnce 한 번 재생이 끝날 때마다 호출 (반복 카운터 등)
-   */
-  function speakLoop(text, gender, onEndOnce) {
-    stop();
-    const myToken = ++currentToken;
-    // currentToken은 stop() 후 다시 ++된 값. 여기서 myToken 고정.
-
+  function speakLoopWeb(text, gender) {
+    stopSynth();
+    const myToken = ++synthToken;
     const fire = () => {
-      if (myToken !== currentToken) return; // 다른 재생이 시작됨
+      if (myToken !== synthToken) return;
       const u = makeUtterance(text, gender);
-      currentUtter = u;
-      u.onend = () => {
-        if (myToken !== currentToken) return;
-        onEndOnce && onEndOnce();
-        // 짧은 간격 후 재시작 (무한반복)
-        setTimeout(() => {
-          if (myToken !== currentToken) return;
-          fire();
-        }, 700);
+      u.onend  = () => {
+        if (myToken !== synthToken) return;
+        setTimeout(() => { if (myToken !== synthToken) return; fire(); }, 700);
       };
-      u.onerror = () => {
-        if (myToken !== currentToken) return;
-        // 일부 브라우저는 cancel 시 error 이벤트가 발생 — 토큰 검증으로 무한루프 방지됨
-      };
+      u.onerror = () => { /* cancel 이벤트 등 무시 */ };
       try {
-        // iOS에서 voices가 늦게 로드되는 경우 대비
         if ((synth.getVoices() || []).length === 0) {
           voicesReady.then(() => {
-            if (myToken !== currentToken) return;
+            if (myToken !== synthToken) return;
             try { synth.speak(makeUtterance(text, gender)); } catch (e) { /* noop */ }
           });
-        } else {
-          synth.speak(u);
-        }
+        } else { synth.speak(u); }
       } catch (e) { /* noop */ }
     };
     fire();
+  }
+
+  function stop() {
+    audioToken++;
+    if (currentAudio) { try { currentAudio.pause(); } catch (e) { /* noop */ } currentAudio = null; }
+    stopSynth();
+  }
+
+  /**
+   * @param {string} text    낭독 텍스트 (폴백용)
+   * @param {'male'|'female'} gender  폴백 성별
+   * @param {string} [src]   사전 생성 MP3 경로 (없으면 Web Speech API만 사용)
+   */
+  function speakLoop(text, gender, src) {
+    stop();
+    const myToken = ++audioToken;
+
+    if (src) {
+      const tryAudio = () => {
+        if (myToken !== audioToken) return;
+        const audio          = new Audio(src);
+        audio.playbackRate   = RATE[STATE.speed] || 1.0;
+        currentAudio         = audio;
+
+        audio.onerror = () => {
+          if (myToken !== audioToken) return;
+          speakLoopWeb(text, gender);   // 파일 없음 → 폴백
+        };
+        audio.onended = () => {
+          if (myToken !== audioToken) return;
+          setTimeout(() => { if (myToken !== audioToken) return; tryAudio(); }, 500);
+        };
+        audio.play().catch(() => {
+          if (myToken !== audioToken) return;
+          speakLoopWeb(text, gender);
+        });
+      };
+      tryAudio();
+    } else {
+      speakLoopWeb(text, gender);
+    }
   }
 
   return { speakLoop, stop, voicesReady };
@@ -249,23 +268,30 @@ function stopAllVoice() {
   setVoiceBtnState("a", false);
 }
 
-// TTS용 텍스트 — 데이터의 \n 줄바꿈은 공백으로 (낭독 시 어색한 끊김 방지)
-function ttsText(s) { return (s || "").replace(/\n/g, " ").replace(/\s+/g, " ").trim(); }
+// TTS용 텍스트 — 괄호 안 중복 설명 제거, 줄바꿈은 공백으로
+function ttsText(s) {
+  return (s || "")
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-function toggleVoice(which) {
-  const item = getCurrent();
-  const text = ttsText(which === "q" ? item.question : item.answer);
+// 음성 재생 시작 — 사전 생성 MP3(audio/{which}{id}.mp3) 우선, 없으면 Web Speech API
+function startVoice(which) {
+  const item   = getCurrent();
+  const text   = ttsText(which === "q" ? item.question : item.answer);
   const gender = genderForId(item.id);
-
-  if (STATE.playing === which) {
-    stopAllVoice();
-    return;
-  }
-  // 다른 면 재생 중이면 정지하고 새로 재생
-  stopAllVoice();
+  const src    = `./audio/${which}${item.id}.mp3`;
   STATE.playing = which;
   setVoiceBtnState(which, true);
-  TTS.speakLoop(text, gender);
+  TTS.speakLoop(text, gender, src);
+}
+
+function toggleVoice(which) {
+  if (STATE.playing === which) { stopAllVoice(); return; }
+  stopAllVoice();
+  startVoice(which);
 }
 
 qVoiceBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleVoice("q"); });
@@ -379,11 +405,7 @@ document.querySelectorAll(".speed-btn").forEach((b) => {
     if (STATE.playing) {
       const which = STATE.playing;
       stopAllVoice();
-      STATE.playing = which;
-      setVoiceBtnState(which, true);
-      const item = getCurrent();
-      const text = ttsText(which === "q" ? item.question : item.answer);
-      TTS.speakLoop(text, genderForId(item.id));
+      startVoice(which);
     }
   });
 });
@@ -411,18 +433,22 @@ buildJumpGrid();
 applySpeedUI();
 render();
 
-// iOS에서 첫 사용자 액션 전까지는 voices가 비어 있을 수 있음 — 미리 워밍업
-if ("speechSynthesis" in window) {
-  // touchstart에서 한 번 빈 utterance를 시도하여 권한 활성화
-  const warmup = () => {
+// iOS AudioContext/Speech 권한 워밍업 — 첫 사용자 인터랙션에서 활성화
+const warmup = () => {
+  // Web Speech API 워밍업 (폴백 대비)
+  if ("speechSynthesis" in window) {
     try {
       const u = new SpeechSynthesisUtterance("");
       u.volume = 0;
       window.speechSynthesis.speak(u);
     } catch (e) { /* noop */ }
-    document.removeEventListener("touchstart", warmup);
-    document.removeEventListener("click", warmup);
-  };
-  document.addEventListener("touchstart", warmup, { once: true, passive: true });
-  document.addEventListener("click", warmup, { once: true });
-}
+  }
+  // HTML5 Audio 워밍업 — 짧은 무음으로 autoplay 정책 해제
+  try {
+    const a = new Audio();
+    a.volume = 0;
+    a.play().catch(() => { /* 정상 */ });
+  } catch (e) { /* noop */ }
+};
+document.addEventListener("touchstart", warmup, { once: true, passive: true });
+document.addEventListener("click",      warmup, { once: true });
