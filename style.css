@@ -80,16 +80,18 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .brand-title {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.3px;
   color: var(--ink-1);
+  white-space: nowrap;
 }
-.brand-sub {
-  font-size: 11px;
+.brand-in {
   color: var(--ink-3);
-  margin-top: 2px;
-  letter-spacing: 0.5px;
+  font-weight: 400;
+  font-size: 13px;
+  margin: 0 2px;
+  font-style: italic;
 }
 .counter {
   font-size: 14px;

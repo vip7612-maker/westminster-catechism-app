@@ -9,3 +9,5 @@ node_modules/
 # 음성 파일은 generate-audio.js 로 생성.
 # 생성 후 배포하려면 아래 줄 주석 해제하거나 그냥 커밋.
 # audio/*.mp3
+.claude/
+.DS_Store
